@@ -14,7 +14,7 @@ namespace TextureBenchmark
         public const string specularColorStr = "#ff0000";
         public const string specularMapPath = @".\Textures\painted_metal_chipped_Specular.png";
         public const string glossinessStr = "1";
-        public const string countStr = "1";
+        public const string countStr = "10";
         public const string glossinessMapPath = @".\Textures\painted_metal_chipped_Glossiness.png";
 
         static readonly float[] ColorDefault = { 1f, 1f, 1f };
@@ -113,7 +113,7 @@ namespace TextureBenchmark
         {
             for (var i = 0; i != _count; i++)
             {
-                var result = SpecularGlossinessUtilities.MergeGetSetPixel(_specularColor, _specularMap, _glossiness, _glossinessMap);
+                var result = SpecularGlossinessUtilities.Merge(_specularColor, _specularMap, _glossiness, _glossinessMap);
             }
         }
 
@@ -122,7 +122,7 @@ namespace TextureBenchmark
         {
             for (var i = 0; i != _count; i++)
             {
-                var result = SpecularGlossinessUtilities.MergeLockbits(_specularColor, _specularMap, _glossiness, _glossinessMap);
+                var result = SpecularGlossinessUtilities.FastMerge(_specularColor, _specularMap, _glossiness, _glossinessMap);
             }
         }
     }

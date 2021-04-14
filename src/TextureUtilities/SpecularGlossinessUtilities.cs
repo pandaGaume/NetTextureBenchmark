@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
@@ -17,7 +16,7 @@ namespace TextureUtilities
         /// <param name="specularMap">the specular map where we get RGB component from</param>
         /// <param name="glossiness">a value to specify glossiness if the glossiness map is undefined</param>
          /// <returns></returns>
-        public static Bitmap MergeGetSetPixel(float [] specularColor, Bitmap specularMap, float glossiness, Bitmap glossinessMap)
+        public static Bitmap Merge(float [] specularColor, Bitmap specularMap, float glossiness, Bitmap glossinessMap)
         {
             if(specularMap == null && glossinessMap == null)
             {
@@ -55,24 +54,24 @@ namespace TextureUtilities
         /// <param name="specularMap">the specular map where we get RGB component from</param>
         /// <param name="glossiness">a value to specify glossiness if the glossiness map is undefined</param>
         /// <returns></returns>
-        public static Bitmap MergeLockbits(float[] specularColor, Bitmap specularMap, float glossiness, Bitmap glossinessMap)
+        public static Bitmap FastMerge(float[] specularColor, Bitmap specularMap, float glossiness, Bitmap glossinessMap)
         {
             if (specularMap != null)
             {
-                return glossinessMap != null ? MergeLockbits(specularMap, glossinessMap) // both map
-                                             : MergeLockbits(specularMap, glossiness   );// specular only with glossiness factor
+                return glossinessMap != null ? FastMerge(specularMap, glossinessMap) // both map
+                                             : FastMerge(specularMap, glossiness   );// specular only with glossiness factor
             }
             if (glossinessMap != null)
             {
                 // glossiness only + specular color
-                return MergeLockbits(specularColor, glossinessMap);
+                return FastMerge(specularColor, glossinessMap);
             }
 
             //at least one of the map must be set
             return null;
         }
 
-        private static Bitmap MergeLockbits(Bitmap specularMap, Bitmap glossinessMap)
+        private static Bitmap FastMerge(Bitmap specularMap, Bitmap glossinessMap)
         {
             unsafe
             {
@@ -106,9 +105,6 @@ namespace TextureUtilities
                         throw new NotSupportedException($"Pixel format not supported :{glossinessMapData.PixelFormat}");
                 }
 
-                var targetPixelSize = 4;
-                var targetStride = targetPixelSize * rect.Width;
-                var targetSize = targetStride * rect.Height;
                 var target = new uint[rect.Height* rect.Width] ;
 
                 // specular
@@ -126,8 +122,8 @@ namespace TextureUtilities
                             Parallel.For(0, specularMapData.Height, row =>
                             {
                                 byte* gPtr = glossinessPtr + (row * glossinessMapData.Stride + glossinessOffset);
-                                byte* rgbPtr = specularPtr + (row * specularMapData.Stride);
                                 var offset = row * rect.Width;
+                                byte* rgbPtr = specularPtr + (row * specularMapData.Stride);
                                 for (int i = offset; i != offset + rect.Width; i++)
                                 {
                                     var a = *gPtr;
@@ -182,16 +178,20 @@ namespace TextureUtilities
                 specularMap.UnlockBits(specularMapData);
                 glossinessMap.UnlockBits(glossinessMapData);
 
+                // build new bitmap
+                var targetPixelSize = 4;
+                var targetStride = rect.Width * targetPixelSize;
                 var targetPtr = Marshal.UnsafeAddrOfPinnedArrayElement(target, 0);
+
                 return new Bitmap(rect.Width, rect.Height, targetStride, PixelFormat.Format32bppArgb, targetPtr);
             } // unsafe
         }
 
-        private static Bitmap MergeLockbits(Bitmap specularMap, float glossiness)
+        private static Bitmap FastMerge(Bitmap specularMap, float glossiness)
         {
             return default;
         }
-        private static Bitmap MergeLockbits(float[] specularColor, Bitmap glossinessMap)
+        private static Bitmap FastMerge(float[] specularColor, Bitmap glossinessMap)
         {
             return default;
         }
