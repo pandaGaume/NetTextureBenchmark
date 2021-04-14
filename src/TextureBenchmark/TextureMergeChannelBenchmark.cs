@@ -1,25 +1,25 @@
 ﻿using BenchmarkDotNet.Attributes;
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TextureUtilities;
 
 namespace TextureBenchmark
 {
     public class TextureMergeChannelBenchmark
     {
+        // remember that Benchmark .net do not provide any way to pass parameters into constructor
+        // work arround is to setting up static parameters it serve all the instances.
+
         public const string specularColorStr = "#ff0000";
         public const string specularMapPath = @".\Textures\painted_metal_chipped_Specular.png";
         public const string glossinessStr = "1";
+        public const string countStr = "1";
         public const string glossinessMapPath = @".\Textures\painted_metal_chipped_Glossiness.png";
-
 
         static readonly float[] ColorDefault = { 1f, 1f, 1f };
         const float GlossinessDefault = 1f;
+        const int countDefault = 1;
 
         static internal Bitmap LoadMap(string path)
         {
@@ -59,59 +59,71 @@ namespace TextureBenchmark
                 }
                 catch
                 {
-                    Console.WriteLine($"Unable to parse specular color [{colorStr}].");
+                    Console.WriteLine($"Unable to parse color [{colorStr}].");
                 }
             }
             return null;
         }
 
-        static internal float? ParseGloss(string glossStr)
+        static internal float? ParseFloat(string floatStr)
         {
-            if (!string.IsNullOrEmpty(glossStr))
+            if (!string.IsNullOrEmpty(floatStr))
             {
-                if (Single.TryParse(glossStr, out float v))
+                if (Single.TryParse(floatStr, out float v))
                 {
                     return v;
                 }
-                Console.WriteLine($"Unable to parse glossiness [{glossStr}].");
+                Console.WriteLine($"Unable to parse [{floatStr}].");
             }
             return null;
         }
 
+        static internal int? ParseInt(string intStr)
+        {
+            if (!string.IsNullOrEmpty(intStr))
+            {
+                if (int.TryParse(intStr, out int v))
+                {
+                    return v;
+                }
+                Console.WriteLine($"Unable to parse [{intStr}].");
+            }
+            return null;
+        }
 
         public float[] _specularColor;
         public Bitmap _specularMap;
         public float _glossiness;
         public Bitmap _glossinessMap;
+        public int _count;
 
         [GlobalSetup]
         public void Init()
         {
+            // load & parse necessary data
             _specularColor = ParseColor(specularColorStr) ?? ColorDefault;
             _specularMap = LoadMap(specularMapPath);
-            _glossiness = ParseGloss(glossinessStr) ?? GlossinessDefault;
+            _glossiness = ParseFloat(glossinessStr) ?? GlossinessDefault;
             _glossinessMap = LoadMap(glossinessMapPath);
+            _count = ParseInt(countStr) ?? countDefault;
         }
 
         [Benchmark]
-        public void MergeSetGetPixel()
+        public void MergeGetSetPixel()
         {
-            var result = SpecularGlossinessUtilities.MergeSetGetPixel(_specularColor, _specularMap, _glossiness, _glossinessMap);
-        }
-    
-        public void MergeLockbitsCopy()
-        {
-            var result = SpecularGlossinessUtilities.MergeLockbitsCopy(_specularColor, _specularMap, _glossiness, _glossinessMap);
+            for (var i = 0; i != _count; i++)
+            {
+                var result = SpecularGlossinessUtilities.MergeGetSetPixel(_specularColor, _specularMap, _glossiness, _glossinessMap);
+            }
         }
 
-        public void MergeLockbitsUnsafe()
+        [Benchmark]
+        public void MergeLockbits()
         {
-            var result = SpecularGlossinessUtilities.MergeLockbitsUnsafe(_specularColor, _specularMap, _glossiness, _glossinessMap);
-        }
-
-        public void MergeLockbitsUnsafeTpl()
-        {
-            var result = SpecularGlossinessUtilities.MergeLockbitsUnsafeTpl(_specularColor, _specularMap, _glossiness, _glossinessMap);
+            for (var i = 0; i != _count; i++)
+            {
+                var result = SpecularGlossinessUtilities.MergeLockbits(_specularColor, _specularMap, _glossiness, _glossinessMap);
+            }
         }
     }
 }
